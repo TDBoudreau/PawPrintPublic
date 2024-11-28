@@ -15,13 +15,12 @@ import (
 	"pawprintpublic/internal/mailer"
 	"pawprintpublic/internal/models"
 	"pawprintpublic/internal/render"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/alexedwards/scs/v2"
 )
-
-const portNumber = ":8080"
 
 var app config.AppConfig
 var session *scs.SessionManager
@@ -59,10 +58,15 @@ func main() {
 	go app.ListenForShutdown()
 	go app.ListenForErrors()
 
-	fmt.Printf("Starting application on port %s\n", portNumber)
+	port := os.Getenv("APP_PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	fmt.Printf("Starting application on port :%s\n", port)
 
 	srv := &http.Server{
-		Addr:    portNumber,
+		Addr:    ":" + port,
 		Handler: routes(&app),
 	}
 
@@ -85,9 +89,6 @@ func run(cfg config.Config) (*driver.DB, error) {
 	errorLog = log.New(os.Stdout, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 	app.ErrorLog = errorLog
 
-	// app.InfoLog.Println("Logger initialized - test message")
-	// app.ErrorLog.Println("Error logger initialized - test message")
-
 	// Initialize Session
 	session = scs.New()
 	session.Lifetime = 24 * time.Hour
@@ -104,11 +105,52 @@ func run(cfg config.Config) (*driver.DB, error) {
 	app.ErrorChanDone = make(chan bool)
 	app.TaskManager = diplomapdfs.NewTaskManager()
 
+	// Read database connection parameters from environment variables
+	host := os.Getenv("POSTGRES_HOST")
+	if host == "" {
+		host = "localhost"
+	}
+
+	port := os.Getenv("POSTGRES_PORT")
+	if port == "" {
+		port = "5432"
+	}
+
+	user := os.Getenv("POSTGRES_USER")
+	if user == "" {
+		user = "postgres"
+	}
+
+	password := os.Getenv("POSTGRES_PASSWORD")
+	if password == "" {
+		passwordFile := os.Getenv("POSTGRES_PASSWORD_FILE")
+		if passwordFile != "" {
+			content, err := os.ReadFile(passwordFile)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read password file: %v", err)
+			}
+			password = strings.TrimSpace(string(content))
+		}
+	}
+
+	dbName := os.Getenv("POSTGRES_DB")
+	if dbName == "" {
+		dbName = "postgres"
+	}
+
+	sslmode := os.Getenv("POSTGRES_SSLMODE")
+	if sslmode == "" {
+		sslmode = "disable"
+	}
+
+	// Construct DSN
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", host, port, user, password, dbName, sslmode)
+
 	// Connect to database
 	log.Println("Connecting to database...")
-	db, err := driver.ConnectSQL()
+	db, err := driver.ConnectSQL(dsn)
 	if err != nil {
-		log.Println("Cannot connect to database! Dying...")
+		log.Println("Cannot connect to database! Exiting...")
 		return nil, err
 	}
 	log.Println("Connected to database!")

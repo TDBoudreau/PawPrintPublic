@@ -6,10 +6,10 @@ import (
 	"pawprintpublic/internal/repository"
 )
 
-// type postgresDBRepo struct {
-// 	App *config.AppConfig
-// 	DB  *sql.DB
-// }
+type postgresDBRepo struct {
+	App *config.AppConfig
+	DB  *sql.DB
+}
 
 type sqliteDBRepo struct {
 	App *config.AppConfig
@@ -22,7 +22,7 @@ type testDBRepo struct {
 }
 
 func NewPostgresRepo(conn *sql.DB, a *config.AppConfig) repository.DatabaseRepo {
-	return &sqliteDBRepo{
+	return &postgresDBRepo{
 		App: a,
 		DB:  conn,
 	}

@@ -127,6 +127,7 @@ func (m *Repository) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	// Parse multipart form data
 	err := r.ParseMultipartForm(10 << 20) // 10 MB
 	if err != nil {
+		m.App.ErrorLog.Println("Error parsing form data")
 		http.Error(w, "Error parsing form data", http.StatusBadRequest)
 		return
 	}
@@ -134,12 +135,14 @@ func (m *Repository) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the file from form data
 	file, handler, err := r.FormFile("file")
 	if err != nil {
+		m.App.ErrorLog.Println("Error parsing form data")
 		http.Error(w, "Error retrieving file", http.StatusBadRequest)
 		return
 	}
 	defer file.Close()
 
 	if !helpers.IsValidExcelFile(handler.Filename) {
+		m.App.ErrorLog.Println("Error parsing form data")
 		http.Error(w, "Invalid file type. Please upload an Excel file.", http.StatusBadRequest)
 		return
 	}
@@ -147,6 +150,7 @@ func (m *Repository) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	// Read the file data into memory
 	fileData, err := io.ReadAll(file)
 	if err != nil {
+		m.App.ErrorLog.Println("Error parsing form data")
 		http.Error(w, "Unable to read file", http.StatusInternalServerError)
 		return
 	}
@@ -161,6 +165,7 @@ func (m *Repository) UploadHandler(w http.ResponseWriter, r *http.Request) {
 	// Store the XLSX file in the database
 	err = m.DB.InsertFile(taskID, sessionID, fileName, "xlsx", fileData)
 	if err != nil {
+		m.App.ErrorLog.Println("Error parsing form data")
 		http.Error(w, "Unable to save file", http.StatusInternalServerError)
 		return
 	}
@@ -250,12 +255,14 @@ func (m *Repository) TermSelectPage(w http.ResponseWriter, r *http.Request) {
 func (m *Repository) SSEHandler(w http.ResponseWriter, r *http.Request) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
+		m.App.ErrorLog.Println("flush is NOT ok")
 		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
 		return
 	}
 
 	taskID := r.URL.Query().Get("task_id")
 	if taskID == "" {
+		m.App.ErrorLog.Println("task_id is required")
 		http.Error(w, "task_id is required", http.StatusBadRequest)
 		return
 	}
@@ -263,6 +270,7 @@ func (m *Repository) SSEHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the task
 	task, err := m.App.TaskManager.GetTask(taskID)
 	if err != nil {
+		m.App.ErrorLog.Println("Task not found")
 		http.Error(w, "Task not found", http.StatusNotFound)
 		return
 	}

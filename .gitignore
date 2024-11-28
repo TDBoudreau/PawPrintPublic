@@ -1,9 +1,6 @@
 /data/input/*
-
 # binaries
 pawprintpublic
-
-# Docker configurations
-dockerfile
-
 pawprint.db
+/db/password.txt
+/bkup

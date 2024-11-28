@@ -9,7 +9,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (m *sqliteDBRepo) AllUsers() ([]models.User, error) {
+func (m *postgresDBRepo) AllUsers() ([]models.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -47,7 +47,7 @@ func (m *sqliteDBRepo) AllUsers() ([]models.User, error) {
 }
 
 // GetUserByID returns a user by id
-func (m *sqliteDBRepo) GetUserByID(id int) (models.User, error) {
+func (m *postgresDBRepo) GetUserByID(id int) (models.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -76,7 +76,7 @@ func (m *sqliteDBRepo) GetUserByID(id int) (models.User, error) {
 }
 
 // UpdateUser updates a user in the database
-func (m *sqliteDBRepo) UpdateUser(u models.User) error {
+func (m *postgresDBRepo) UpdateUser(u models.User) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -100,7 +100,7 @@ func (m *sqliteDBRepo) UpdateUser(u models.User) error {
 }
 
 // Authenticate authenticates a user
-func (m *sqliteDBRepo) Authenticate(email, testPassword string) (int, string, int, error) {
+func (m *postgresDBRepo) Authenticate(email, testPassword string) (int, string, int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
