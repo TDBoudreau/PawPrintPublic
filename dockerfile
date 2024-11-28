@@ -66,7 +66,7 @@ RUN chown -R appuser:appgroup /app
 USER appuser
 
 # Expose the port your application listens on
-# EXPOSE 8080
+EXPOSE 8080
 
 # Set the entry point to run the Go binary
 ENTRYPOINT ["./pawprintpublic"]

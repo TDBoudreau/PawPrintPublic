@@ -57,6 +57,8 @@ services:
       - POSTGRES_DB=pawprint
       - POSTGRES_PORT=5432
       - POSTGRES_SSLMODE=disable
+    expose:
+      - "8080"
     deploy:
       mode: replicated
       replicas: 3
