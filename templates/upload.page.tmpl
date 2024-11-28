@@ -1,0 +1,240 @@
+{{template "base" .}}
+
+{{define "css"}}
+
+{{end}}
+
+{{define "upload"}}
+<h1 class="text-center text-primary">
+  Collin College - Cougar Paw Print Diplomas
+</h1>
+<h2 class="mb-4 text-center text-secondary">File Upload</h2>
+
+<div class="card">
+  <div class="card-body">
+    <form id="uploadForm" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}" />
+
+      <div class="mb-3">
+        <label for="fileInput" class="form-label"
+          >Select Excel File</label
+        >
+        <input
+          type="file"
+          class="form-control"
+          name="file"
+          id="fileInput"
+          accept=".xlsx, .xls"
+          required
+        />
+      </div>
+
+      <div class="d-grid">
+        <button type="submit" id="submitButton" class="btn btn-primary">
+          Upload
+        </button>
+      </div>
+    </form>
+
+    <hr />
+
+    <h4 class="mt-4">Progress</h4>
+    <div id="progressStatus" class="mb-2">No task in progress.</div>
+    <div class="progress mb-3" style="height: 25px">
+      <div
+        id="progressBar"
+        class="progress-bar"
+        role="progressbar"
+        style="width: 0%"
+        aria-valuenow="0"
+        aria-valuemin="0"
+        aria-valuemax="100"
+      >
+        0%
+      </div>
+    </div>
+
+    <div class="row">
+      <div id="pdfLink" class="col-md-4 offset-md-2 mt-3"></div>
+      <div id="xlsxLink" class="col-md-4 offset-md-1 mt-3"></div>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{define "js"}}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const uploadForm = document.getElementById("uploadForm");
+    const fileInput = document.getElementById("fileInput");
+    const submitButton = document.getElementById("submitButton");
+    const progressStatus = document.getElementById("progressStatus");
+    const progressBar = document.getElementById("progressBar");
+    const pdfLinkDiv = document.getElementById("pdfLink");
+    const xlsxLinkkDiv = document.getElementById("xlsxLink");
+    let evtSource = null; // To keep track of the current SSE connection
+
+    // Function to disable form inputs
+    function disableForm() {
+      fileInput.disabled = true;
+      submitButton.disabled = true;
+      submitButton.innerHTML =
+        '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Uploading...';
+    }
+
+    // Function to enable form inputs
+    function enableForm() {
+      fileInput.disabled = false;
+      submitButton.disabled = false;
+      submitButton.innerText = "Upload";
+    }
+
+    // Function to reset progress indicators and download link
+    function resetProgress() {
+      progressStatus.innerText = "No task in progress.";
+      progressBar.style.width = "0%";
+      progressBar.setAttribute("aria-valuenow", 0);
+      progressBar.innerText = "0%";
+      pdfLinkDiv.innerHTML = "";
+      xlsxLinkkDiv.innerHTML = "";
+    }
+
+    // Function to show alerts
+    function showAlert(message, type = "danger") {
+      const alertDiv = document.createElement("div");
+      alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+      alertDiv.role = "alert";
+      alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      `;
+      // Insert the alert above the form
+      const cardBody = document.querySelector(".card-body");
+      cardBody.insertBefore(alertDiv, cardBody.firstChild);
+    }
+
+    // Event listener for form submission
+    uploadForm.addEventListener("submit", function (e) {
+      resetProgress();
+
+      e.preventDefault();
+
+      // Disable the form to prevent multiple submissions
+      disableForm();
+
+      let formData = new FormData();
+      let csrfTokenInput = document.querySelector('input[name="csrf_token"]');
+      formData.append("file", fileInput.files[0]);
+      formData.append("term");
+      formData.append("csrf_token", csrfTokenInput.value);
+
+      // Send the file via AJAX
+      let xhr = new XMLHttpRequest();
+      xhr.open("POST", "/upload", true);
+
+      xhr.onload = function () {
+        if (xhr.status === 200) {
+          let response = JSON.parse(xhr.responseText);
+          let taskID = response.task_id;
+          startSSE(taskID);
+        } else {
+          showAlert("Upload failed! Please try again.");
+          // Re-enable the form if upload fails
+          enableForm();
+        }
+      };
+
+      xhr.onerror = function () {
+        showAlert(
+          "An error occurred during the upload. Please check your connection and try again."
+        );
+        // Re-enable the form if an error occurs
+        enableForm();
+      };
+
+      xhr.send(formData);
+    });
+
+    // Function to start Server-Sent Events (SSE) for progress tracking
+    function startSSE(taskID) {
+      let evtSource = new EventSource("/sse?task_id=" + taskID);
+
+      evtSource.onmessage = function (e) {
+        let progressUpdate = JSON.parse(e.data);
+
+        progressStatus.innerText = progressUpdate.status;
+        progressBar.style.width = progressUpdate.progress + "%";
+        progressBar.setAttribute("aria-valuenow", progressUpdate.progress);
+        progressBar.innerText = progressUpdate.progress + "%";
+
+        if (progressUpdate.error) {
+          notify(progressUpdate.error, "error");
+          // An error occurred during processing
+          console.error("Processing error:", progressUpdate.error);
+          document.getElementById("progressStatus").innerText =
+            "Error: " + progressUpdate.error;
+
+          evtSource.close();
+          enableForm();
+        }
+      };
+
+      evtSource.addEventListener("done", function (e) {
+        console.log("Task completed.");
+        evtSource.close();
+        enableForm();
+
+        // Provide a download link
+        let pdfLink = document.createElement("a");
+        pdfLink.href = "/download/pdf?task_id=" + taskID;
+        pdfLink.innerText = "Download PDF";
+        pdfLink.classList.add("btn");
+        pdfLink.classList.add("btn-success");
+
+        let icon1 = document.createElement("span");
+        icon1.classList.add("mdi");
+        icon1.classList.add("mdi-download");
+        pdfLink.appendChild(icon1);
+        pdfLinkDiv.appendChild(pdfLink);
+
+        pdfLink.classList.add("pe-2");
+
+        let excelLink = document.createElement("a");
+        excelLink.href = "/download/xlsx?task_id=" + taskID;
+        excelLink.innerText = "Download Excel";
+        excelLink.classList.add("btn");
+        excelLink.classList.add("btn-success");
+
+        let icon2 = document.createElement("span");
+        icon2.classList.add("mdi");
+        icon2.classList.add("mdi-download");
+        excelLink.appendChild(icon2);
+        xlsxLinkkDiv.appendChild(excelLink);
+      });
+
+      evtSource.onerror = function (e) {
+        console.error("SSE Error:", e);
+        evtSource.close();
+        enableForm();
+      };
+    }
+
+    function resetForm() {
+      // Reset progress indicators and download link
+      resetProgress();
+      // Close any existing SSE connection if a new file is selected
+      if (evtSource) {
+        evtSource.close();
+        evtSource = null;
+      }
+      // Enable the form in case it was disabled
+      enableForm();
+    }
+
+    // Event listeners to reset progress and links
+    fileInput.addEventListener("change", function () {
+      resetForm();
+    });
+  });
+</script>
+{{end}}

@@ -1,0 +1,66 @@
+html,
+body {
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  margin: 0;
+}
+
+.container.content {
+  flex-grow: 1;
+  padding-bottom: 1.5em;
+}
+
+.max-w-100 {
+  max-width: 100%;
+}
+
+.my-footer {
+  background-color: #163b65;
+  margin-top: 1.5em;
+  padding: 1em;
+  color: #ffffff;
+  font-size: 80%;
+}
+
+.room-image {
+  max-width: 50%;
+}
+
+.datepicker {
+  z-index: 10000;
+}
+
+/* Overriding Bootstrap defaults */
+:root {
+  --bs-primary: #003c8f;
+  --bs-primary-rgb: 0, 60, 143;
+  --bs-secondary: #001861;
+  --bs-success: #198754;
+  --bs-info: #80c6fe;
+  --bs-warning: #ffc107;
+  --bs-danger: #dc3545;
+  --bs-light: #f8f9fa;
+  --bs-dark: #212529;
+}
+
+.btn-primary {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: #001861;
+  --bs-btn-border-color: #001861;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #003c8f;
+  --bs-btn-hover-border-color: #003c8f;
+  --bs-btn-focus-shadow-rgb: 49, 132, 253;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #003c8f;
+  --bs-btn-active-border-color: #003c8f;
+  --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+  --bs-btn-disabled-color: #fff;
+  --bs-btn-disabled-bg: #001861;
+  --bs-btn-disabled-border-color: #001861;
+}

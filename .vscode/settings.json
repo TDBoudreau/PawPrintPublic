@@ -1,0 +1,11 @@
+{
+  "sqltools.connections": [
+    {
+      "previewLimit": 50,
+      "driver": "SQLite",
+      "name": "PawPrintPublic",
+      "group": "PawPrint",
+      "database": "\\\\wsl.localhost\\Ubuntu\\home\\timothy\\golang\\PawPrintPublic"
+    }
+  ]
+}

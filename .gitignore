@@ -1,0 +1,9 @@
+/data/input/*
+
+# binaries
+pawprintpublic
+
+# Docker configurations
+dockerfile
+
+pawprint.db

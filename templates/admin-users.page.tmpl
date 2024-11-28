@@ -1,0 +1,284 @@
+{{template "base" .}}
+
+{{define "css"}}
+<style>
+  .editable {
+    padding: 0;
+  }
+
+  .editable input,
+  .editable select {
+    width: 100%;
+    height: 100%;
+    border: none;
+    padding: 8px;
+  }
+
+  .validation-error {
+    border: 1px solid red;
+  }
+</style>
+{{end}}
+
+{{define "content"}}
+<h1>Manage Users</h1>
+{{$users := index .Data "users"}}
+{{$usersLength := index .Data "usersLength"}}
+<div class="container content">
+  <div class="row">
+    <div class="col">
+      <table class="table table-striped" id="usersTable">
+        <thead>
+          <tr>
+            <th scope="col">ID</th>
+            <th scope="col">First</th>
+            <th scope="col">Last</th>
+            <th scope="col">Email</th>
+            <th scope="col">Access Level</th>
+            <th scope="col">Last Modified</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range $users}}
+          <tr data-user-id="{{.ID}}">
+            <td>{{.ID}}</td>
+            <td class="first-name">{{.FirstName}}</td>
+            <td class="last-name">{{.LastName}}</td>
+            <td class="email">{{.Email}}</td>
+            <td class="access-level">{{.AccessLevel}}</td>
+            <td class="updated-at" data-timestamp="{{.UpdatedAt}}">
+              {{.UpdatedAt}}
+            </td>
+            <td>
+              <button
+                type="button"
+                class="btn btn-sm btn-primary edit-btn"
+                onclick="editUser({{.ID}})"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-success save-btn d-none"
+                onclick="saveUser({{.ID}})"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-secondary cancel-btn d-none"
+                onclick="cancelEdit({{.ID}})"
+              >
+                Cancel
+              </button>
+            </td>
+          </tr>
+          {{
+            end
+          }}
+          <tr>
+            <td colspan="7">
+              <a
+                href="/admin/users/add"
+                class="btn btn-primary"
+                style="width: 100%"
+                >Add User</a
+              >
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{define "js"}}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const dateCells = document.querySelectorAll(".updated-at");
+
+    dateCells.forEach((cell) => {
+      const timestamp = cell.dataset.timestamp;
+      const date = new Date(timestamp);
+
+      // Format the date however you prefer
+      const formattedDate = new Intl.DateTimeFormat("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(date);
+
+      cell.textContent = formattedDate;
+    });
+  });
+
+  // Store original data to allow cancellation
+  const originalData = {};
+
+  function editUser(id) {
+    const row = document.querySelector(`tr[data-user-id='${id}']`);
+    if (!row) return;
+
+    // Hide Edit button, show Save and Cancel buttons
+    row.querySelector(".edit-btn").classList.add("d-none");
+    row.querySelector(".save-btn").classList.remove("d-none");
+    row.querySelector(".cancel-btn").classList.remove("d-none");
+
+    // Store original data
+    originalData[id] = {
+      firstName: row.querySelector(".first-name").innerText,
+      lastName: row.querySelector(".last-name").innerText,
+      email: row.querySelector(".email").innerText,
+      accessLevel: row.querySelector(".access-level").innerText,
+    };
+
+    // Replace cells with input fields
+    row.querySelector(
+      ".first-name"
+    ).innerHTML = `<input type="text" class="form-control" name="firstName" value="${originalData[id].firstName}" required>`;
+    row.querySelector(
+      ".last-name"
+    ).innerHTML = `<input type="text" class="form-control" name="lastName" value="${originalData[id].lastName}" required>`;
+    row.querySelector(
+      ".email"
+    ).innerHTML = `<input type="email" class="form-control" name="email" value="${originalData[id].email}" required>`;
+    row.querySelector(".access-level").innerHTML = `
+          <select class="form-select" name="accessLevel" required>
+              <option value="2" ${
+                originalData[id].accessLevel === "2" ? "2" : ""
+              }>Admin</option>
+              <option value="1" ${
+                originalData[id].accessLevel === "1" ? "1" : ""
+              }>User</option>
+          </select>`;
+  }
+
+  function cancelEdit(id) {
+    const row = document.querySelector(`tr[data-user-id='${id}']`);
+    if (!row || !originalData[id]) return;
+
+    // Restore original data
+    row.querySelector(".first-name").innerText = originalData[id].firstName;
+    row.querySelector(".last-name").innerText = originalData[id].lastName;
+    row.querySelector(".email").innerText = originalData[id].email;
+    row.querySelector(".access-level").innerText = originalData[id].accessLevel;
+
+    // Hide Save and Cancel buttons, show Edit button
+    row.querySelector(".edit-btn").classList.remove("d-none");
+    row.querySelector(".save-btn").classList.add("d-none");
+    row.querySelector(".cancel-btn").classList.add("d-none");
+
+    // Remove stored original data
+    delete originalData[id];
+  }
+
+  async function saveUser(id) {
+    const row = document.querySelector(`tr[data-user-id='${id}']`);
+    if (!row) return;
+
+    const form = row.querySelector("td").closest("tr"); // Not necessary, but for clarity
+
+    // Get input values
+    const firstName = row.querySelector('input[name="firstName"]').value.trim();
+    const lastName = row.querySelector('input[name="lastName"]').value.trim();
+    const email = row.querySelector('input[name="email"]').value.trim();
+    const accessLevel =
+      parseInt(row.querySelector('select[name="accessLevel"]').value) || 0;
+
+    // Simple frontend validation
+    let valid = true;
+
+    // Reset validation states
+    row.querySelectorAll("input, select").forEach((input) => {
+      input.classList.remove("is-invalid");
+    });
+
+    if (!firstName) {
+      row.querySelector('input[name="firstName"]').classList.add("is-invalid");
+      valid = false;
+    }
+    if (!lastName) {
+      row.querySelector('input[name="lastName"]').classList.add("is-invalid");
+      valid = false;
+    }
+    if (!validateEmail(email)) {
+      row.querySelector('input[name="email"]').classList.add("is-invalid");
+      valid = false;
+    }
+    if (!accessLevel) {
+      row
+        .querySelector('select[name="accessLevel"]')
+        .classList.add("is-invalid");
+      valid = false;
+    }
+
+    if (!valid) {
+      return;
+    }
+
+    // Prepare data to send
+    const data = {
+      id: id,
+      first_name: firstName,
+      last_name: lastName,
+      email: email,
+      access_level: accessLevel,
+    };
+
+    try {
+      const response = await fetch("/admin/users/edit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": getCSRFToken(),
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (response.ok) {
+        // Update the row with new data
+        row.querySelector(".first-name").innerText = firstName;
+        row.querySelector(".last-name").innerText = lastName;
+        row.querySelector(".email").innerText = email;
+        row.querySelector(".access-level").innerText = accessLevel;
+
+        // Hide Save and Cancel buttons, show Edit button
+        row.querySelector(".edit-btn").classList.remove("d-none");
+        row.querySelector(".save-btn").classList.add("d-none");
+        row.querySelector(".cancel-btn").classList.add("d-none");
+
+        row.querySelector("td:nth-child(6)").innerText =
+          new Date().toLocaleString();
+
+        // Remove stored original data
+        delete originalData[id];
+      } else {
+        // Handle server errors
+        const errorData = await response.json();
+        alert("Error: " + (errorData.message || "Failed to update user."));
+      }
+    } catch (error) {
+      console.error("Error updating user:", error);
+      alert("An unexpected error occurred.");
+    }
+  }
+
+  function validateEmail(email) {
+    // Simple email regex
+    const re =
+      /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@(([^<>()[\]\\.,;:\s@"]+\.)+[^<>()[\]\\.,;:\s@"]{2,})$/i;
+    return re.test(String(email).toLowerCase());
+  }
+
+  function getCSRFToken() {
+    // Implement this function based on how your backend provides CSRF tokens
+    // For example, if it's in a meta tag:
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute("content") : "";
+  }
+</script>
+{{end}}
