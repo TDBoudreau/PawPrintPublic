@@ -8,6 +8,14 @@
 # database or a cache. For examples, see the Awesome Compose repository:
 # https://github.com/docker/awesome-compose
 services:
+  watchtower:
+    image: containrrr/watchtower
+    command:
+      - "--label-enable"
+      - "--interval"
+      - "30"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
   reverse-proxy:
     image: traefik:v3.1
     command:
@@ -42,12 +50,13 @@ services:
       - "traefik.http.middlewares.auth.basicauth.users=admin:$$apr1$$/il8.wDB$$PX32bSi3gmzBWd8HfI.Rr."
 
   pawprint:
-    image: ghcr.io/tdboudreau/pawprint:latest
+    image: ghcr.io/tdboudreau/pawprint:prod
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.pawprint.rule=Host(`solovps.cloud`)"
       - "traefik.http.routers.pawprint.entrypoints=websecure"
       - "traefik.http.routers.pawprint.tls.certresolver=myresolver"
+      - "com.centurylinkslabs.watchtower.enable=true"
     secrets:
       - db-password
     environment:
@@ -57,11 +66,13 @@ services:
       - POSTGRES_DB=pawprint
       - POSTGRES_PORT=5432
       - POSTGRES_SSLMODE=disable
+      - IN_PRODUCTION=false
+      - USE_CACHE=false
     expose:
       - "8080"
-    deploy:
-      mode: replicated
-      replicas: 3
+    # deploy:
+    #   mode: replicated
+    #   replicas: 3
     depends_on:
       db:
         condition: service_healthy

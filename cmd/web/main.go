@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/gob"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -30,15 +29,22 @@ var errorLog *log.Logger
 // main is the main application function
 func main() {
 	fmt.Println("Basic stdout test")
-	// Parse flags
-	inProduction := flag.Bool("production", true, "Application is in production")
-	useCache := flag.Bool("cache", false, "Use template cache")
 
-	flag.Parse()
+	inProduction := true
+	inProductionEnv := os.Getenv("IN_PRODUCTION")
+	if inProductionEnv == "false" {
+		inProduction = false
+	}
+
+	useCache := true
+	useCacheEnv := os.Getenv("USE_CACHE")
+	if useCacheEnv == "false" {
+		useCache = false
+	}
 
 	cfg := config.Config{
-		InProduction: *inProduction,
-		UseCache:     *useCache,
+		InProduction: inProduction,
+		UseCache:     useCache,
 	}
 
 	db, err := run(cfg)
